@@ -2,10 +2,10 @@
 
 **Sıfırdan yazılmış bir software rasterizer.** WebGL yok, canvas 2D dışında hiçbir çizim API'si yok, tek bir bağımlılık yok. Ekrandaki her piksel — üçgen taraması, z-buffer, gölge haritası, aydınlatma, tonemapping — düz JavaScript ile hesaplanıyor. `canvas` yalnızca hazır piksel dizisini ekrana basmak için kullanılıyor (`putImageData`).
 
-## Canlı demo
+## Çalıştırmanın en hızlı yolu
 
-- **GitHub Pages:** https://umutseve4.github.io/scanline/
-- **Tek dosya:** `dist/scanline.html` — indir, çift tıkla, çalışır. Sunucu, kurulum, internet gerekmez.
+- **Tek dosya:** `npm run build` → `dist/scanline.html`. İndir, çift tıkla, çalışır. Sunucu, kurulum, internet gerekmez.
+- **GitHub Pages:** `.github/workflows/pages.yml` hazır ve `main`'e her push'ta çalışıyor; ancak yayının açılması için depo ayarlarında **Settings → Pages → Source: GitHub Actions** bir kez seçilmeli. Seçildikten sonra adres https://umutseve4.github.io/scanline/ olur.
 
 ## Ne yapıyor?
 
@@ -34,7 +34,7 @@ Gerçek bir GPU'nun yaptığı işin elle yazılmış hali (`src/raster.js`):
 2. **Near-plane clipping** — homojen uzayda Sutherland–Hodgman; kameranın arkasına taşan üçgenler kırpılır, sonuç fan-triangulate edilir.
 3. **Perspective divide + viewport map** — NDC → piksel koordinatları.
 4. **Backface culling** — işaretli ekran alanı ile.
-5. **Edge-function scan** — bounding box üzerinde artımsal kenar fonksiyonları; kapsama testi tamsayı-dostu 3 karşılaştırma.
+5. **Edge-function scan** — bounding box üzerinde artımsal kenar fonksiyonları; kapsama testi 3 karşılaştırma.
 6. **Perspective-correct interpolation** — attribute/w interpolasyonu, sonra 1/w'ye bölme. (Affine interpolasyon zeminde belirgin şekilde eğrilirdi.)
 7. **Z-buffer** — Float32Array derinlik tamponu.
 8. **Shadow pass** — ışık için ortografik derinlik render'ı, ardından 3×3 PCF ve eğime bağlı depth bias (`0.0016 + 0.006 * (1 - N·L)`) ile shadow acne engelleniyor.
@@ -88,7 +88,7 @@ CI (`.github/workflows/ci.yml`) her push'ta beş adım çalıştırır ve hiçbi
 - **`build`** — altı ES modülünü tek bir HTML'e gömer; artıkta kalan `import`/`export` varsa hata verir.
 - **`verify`** — üretilen tek dosyayı Node'un `vm`'inde minimal bir DOM stub'ıyla **çalıştırır**, `putImageData`'ya giden gerçek pikselleri yakalar ve kapsama/parlaklık eşiklerini kontrol eder. Yani "bundle parse oluyor" değil, "bundle görüntü çiziyor" test ediliyor.
 
-Referans ölçüm (Node 20, tek çekirdek, 1000×620, 20.485 üçgen, 556.189 fragment): shadow pass ~36 ms, geometry+shading ~174 ms, resolve ~57 ms. Tarayıcıda varsayılan 0.75x ölçekte etkileşimli hızda döner; ağır sahnelerde çözünürlük kaydırıcısını düşürmek doğrusala yakın kazanç verir.
+Ölçülen referans değerler (Node 24, tek çekirdek, 960×600, 20.485 üçgen, 527.240 fragment, 2 üçgen near-plane'de kırpıldı): shadow pass 43.63 ms, geometry+shading 178.76 ms, resolve 53.52 ms, toplam 275.91 ms. Aynı koşuda konu kapsama oranı %66.0, ortalama parlaklık 81.99/255. Bundle doğrulaması 675×420'de %65.1 kapsama ve 223.67 maksimum luma ile geçti.
 
 ## Neden ilginç?
 
