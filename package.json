@@ -1,0 +1,16 @@
+{
+  "name": "scanline",
+  "version": "1.0.0",
+  "description": "A software rasterizer written from scratch in plain JavaScript - no WebGL, no dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node tools/test-math.mjs",
+    "still": "node tools/render-still.mjs docs/still.png 1000 620 3.2",
+    "modes": "node tools/render-modes.mjs",
+    "build": "node tools/build-single-file.mjs",
+    "verify": "node tools/verify-bundle.mjs",
+    "ci": "npm run test && npm run still && npm run modes && npm run build && npm run verify"
+  },
+  "license": "MIT"
+}

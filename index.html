@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>scanline — software rasterizer from scratch</title>
+<style>
+  :root{
+    --bg:#0b0d13; --panel:#12151f; --panel2:#171b28; --line:#242a3a;
+    --text:#e7eaf3; --dim:#98a0b8; --accent:#4dd6c1; --accent2:#f0913a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header{
+    padding:14px 20px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+    background:linear-gradient(180deg,#141826,#0e111a);
+  }
+  header h1{margin:0; font-size:17px; letter-spacing:.4px}
+  header h1 span{color:var(--accent)}
+  header p{margin:0; color:var(--dim); font-size:12.5px}
+  main{flex:1; display:flex; min-height:0}
+  #stage{flex:1; position:relative; min-width:0; background:#05070c}
+  canvas{display:block; width:100%; height:100%; image-rendering:auto}
+  #hud{
+    position:absolute; top:12px; left:12px; padding:10px 12px;
+    background:rgba(10,13,20,.72); border:1px solid var(--line); border-radius:10px;
+    font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--dim);
+    backdrop-filter:blur(6px); pointer-events:none;
+  }
+  #hud b{color:var(--text); font-weight:600}
+  #hud .k{color:var(--accent)}
+  aside{
+    width:272px; border-left:1px solid var(--line); background:var(--panel);
+    padding:16px; overflow:auto;
+  }
+  aside h2{
+    margin:0 0 10px; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--dim);
+  }
+  .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:9px 0}
+  .row label{color:var(--text)}
+  .val{color:var(--accent); font:12px ui-monospace,Menlo,Consolas,monospace}
+  select,input[type=range]{accent-color:var(--accent)}
+  select{
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:7px; padding:5px 8px; font-size:13px;
+  }
+  input[type=range]{width:120px}
+  button{
+    flex:1; background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px; cursor:pointer; font-size:13px;
+  }
+  button:hover{border-color:var(--accent); color:var(--accent)}
+  hr{border:0; border-top:1px solid var(--line); margin:16px 0}
+  .pipe{font:11.5px/1.8 ui-monospace,Menlo,Consolas,monospace; color:var(--dim); margin:0; padding-left:16px}
+  .pipe li::marker{color:var(--accent2)}
+  footer{
+    border-top:1px solid var(--line); padding:9px 20px; color:var(--dim); font-size:12px;
+    display:flex; gap:16px; flex-wrap:wrap;
+  }
+  kbd{
+    background:var(--panel2); border:1px solid var(--line); border-bottom-width:2px;
+    border-radius:5px; padding:1px 6px; font:11px ui-monospace,Menlo,monospace; color:var(--text);
+  }
+  @media (max-width:820px){ main{flex-direction:column} aside{width:auto; border-left:0; border-top:1px solid var(--line)} #stage{min-height:56vh} }
+</style>
+</head>
+<body>
+<header>
+  <h1>scan<span>line</span></h1>
+  <p>Sıfırdan yazılmış software rasterizer — WebGL yok, kütüphane yok. Her piksel JavaScript ile hesaplanıyor.</p>
+</header>
+
+<main>
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <div id="hud">
+      <div><b id="fps">0</b> fps &nbsp;·&nbsp; <b id="ms">0</b> ms/frame &nbsp;·&nbsp; <span id="res">-</span></div>
+      <div><span class="k">tris</span> <b id="tris">0</b> &nbsp; <span class="k">frags</span> <b id="frags">0</b> &nbsp; <span class="k">clipped</span> <b id="clip">0</b></div>
+      <div><span class="k">shadow</span> <b id="tShadow">0</b>ms &nbsp; <span class="k">geo</span> <b id="tGeo">0</b>ms &nbsp; <span class="k">resolve</span> <b id="tRes">0</b>ms</div>
+    </div>
+  </div>
+
+  <aside>
+    <h2>Render</h2>
+    <div class="row"><label for="mode">Mod</label><select id="mode"></select></div>
+    <div class="row"><label for="shadows">Gölge haritası</label><input type="checkbox" id="shadows" checked></div>
+    <div class="row"><label for="wire">Wireframe</label><input type="checkbox" id="wire"></div>
+    <div class="row"><label for="spin">Animasyon</label><input type="checkbox" id="spin" checked></div>
+    <div class="row"><label for="scale">Çözünürlük</label><span><input type="range" id="scale" min="0.25" max="1" step="0.05" value="0.75"><span class="val" id="scaleVal">0.75x</span></span></div>
+    <div class="row"><label for="exposure">Pozlama</label><span><input type="range" id="exposure" min="0.3" max="2.5" step="0.05" value="1"><span class="val" id="exposureVal">1.00</span></span></div>
+    <div class="row"><button id="pause">Pause</button><button id="shot">PNG kaydet</button></div>
+
+    <hr>
+    <h2>Pipeline</h2>
+    <ol class="pipe">
+      <li>vertex transform</li>
+      <li>near-plane clipping</li>
+      <li>perspective divide</li>
+      <li>backface culling</li>
+      <li>edge-function scan</li>
+      <li>z-buffer + PCF shadow</li>
+      <li>Blinn-Phong shading</li>
+      <li>ACES tonemap + gamma</li>
+    </ol>
+  </aside>
+</main>
+
+<footer>
+  <span>Sürükle: yörünge · Tekerlek: zoom</span>
+  <span><kbd>W</kbd> wireframe</span>
+  <span><kbd>S</kbd> gölge</span>
+  <span><kbd>Space</kbd> duraklat</span>
+  <span><kbd>1</kbd>–<kbd>4</kbd> render modu</span>
+</footer>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
