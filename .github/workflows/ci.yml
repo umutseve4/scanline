@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Math unit tests
+        run: npm run test
+      - name: Headless still render + smoke test
+        run: npm run still
+      - name: Render every debug mode
+        run: npm run modes
+      - name: Build single-file HTML
+        run: npm run build
+      - name: Verify the bundle actually draws pixels
+        run: npm run verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renders
+          path: |
+            docs/*.png
+            dist/scanline.html
