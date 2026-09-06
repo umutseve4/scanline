@@ -41,16 +41,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -uo pipefail
-          status="$(gh api "repos/$GITHUB_REPOSITORY/pages" \
-            --silent --include 2>/dev/null | head -n 1 | tr -d '\r' || true)"
+          set -u
           if gh api "repos/$GITHUB_REPOSITORY/pages" >/tmp/pages.json 2>/tmp/pages.err; then
             enabled=true
           else
             enabled=false
           fi
           echo "pages_enabled=$enabled" >> "$GITHUB_OUTPUT"
-          echo "raw status line: ${status:-<none>}"
+          echo "pages_enabled=$enabled"
           {
             echo "## Pages preflight"
             echo ""
@@ -70,7 +68,8 @@ jobs:
               echo "API cevabi:"
               echo ""
               echo '```'
-              head -c 500 /tmp/pages.err 2>/dev/null || echo "(bos)"
+              head -c 500 /tmp/pages.err || true
+              echo ""
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::warning title=GitHub Pages kapali::Yayin atlandi. Settings -> Pages -> Source: GitHub Actions."
