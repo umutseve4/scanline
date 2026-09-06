@@ -1,34 +1,89 @@
-# scanline
+<h1 align="center">scanline</h1>
 
-**Sıfırdan yazılmış bir software rasterizer.** WebGL yok, canvas 2D dışında hiçbir çizim API'si yok, tek bir bağımlılık yok. Ekrandaki her piksel — üçgen taraması, z-buffer, gölge haritası, aydınlatma, tonemapping — düz JavaScript ile hesaplanıyor. `canvas` yalnızca hazır piksel dizisini ekrana basmak için kullanılıyor (`putImageData`).
+<p align="center">
+  GPU kullanmadan, her pikseli JavaScript'te tek tek hesaplayan bir 3D renderer.<br>
+  Üçgen taraması, z-buffer, gölge haritası, aydınlatma, tonemapping — hepsi elle yazıldı.<br>
+  <code>canvas</code> yalnızca hazır piksel dizisini ekrana basmak için var.
+</p>
 
-## Çalıştırmanın en hızlı yolu
+<p align="center">
+  <a href="https://github.com/umutseve4/scanline/actions"><img src="https://github.com/umutseve4/scanline/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/CI%20ad%C4%B1m%C4%B1-5-FF4D4F?style=flat-square" alt="5 CI adımı">
+  <img src="https://img.shields.io/badge/ba%C4%9F%C4%B1ml%C4%B1l%C4%B1k-0-FF4D4F?style=flat-square" alt="0 bağımlılık">
+  <img src="https://img.shields.io/badge/pipeline%20a%C5%9Famas%C4%B1-10-FF4D4F?style=flat-square" alt="10 aşama">
+</p>
 
-- **Tek dosya:** `npm run build` → `dist/scanline.html`. İndir, çift tıkla, çalışır. Sunucu, kurulum, internet gerekmez.
-- **GitHub Pages:** `.github/workflows/pages.yml` hazır ve `main`'e her push'ta çalışıyor; ancak yayının açılması için depo ayarlarında **Settings → Pages → Source: GitHub Actions** bir kez seçilmeli. Seçildikten sonra adres https://umutseve4.github.io/scanline/ olur.
+---
 
-## Ne yapıyor?
+## 30 saniyede ne oluyor?
 
-Döner bir (2,3) torus knot, zıplayan bir küre, dönen bir küp ve satranç tahtası zemin; yönlü ışık, 3x3 PCF yumuşak gölge, Blinn-Phong specular ve ACES tonemap ile gerçek zamanlı çiziliyor.
+```bash
+git clone https://github.com/umutseve4/scanline && cd scanline
+npm run build      # → dist/scanline.html
+```
 
-Arayüzden kontrol edilebilenler:
+Çıkan tek dosyayı çift tıkla. Sunucu, kurulum, internet gerekmez.
+
+Kaynaktan çalıştırmak istersen (ES modülleri için basit bir sunucu yeterli):
+
+```bash
+python3 -m http.server 8000   # sonra http://localhost:8000
+```
+
+Ekranda: dönen bir (2,3) torus knot, zıplayan bir küre, dönen bir küp ve satranç
+tahtası zemin; yönlü ışık, 3×3 PCF yumuşak gölge, Blinn-Phong specular ve ACES
+tonemap ile gerçek zamanlı çiziliyor.
+
+## Kontroller
 
 | Kontrol | Açıklama |
 | --- | --- |
 | Mod | `shaded`, `normals`, `depth` (linearize edilmiş), `uv` |
 | Gölge haritası | 768×768 shadow map + PCF açık/kapalı |
 | Wireframe | Bresenham çizgilerle tel kafes overlay |
-| Çözünürlük | 0.25x – 1.0x iç render ölçeği (performans/kalite dengesi) |
+| Çözünürlük | 0.25x – 1.0x iç render ölçeği |
 | Pozlama | ACES öncesi exposure 0.30 – 2.50 |
 | PNG kaydet | O anki kareyi indirir |
 
-Kısayollar: `W` wireframe, `S` gölge, `Space` duraklat, `1`–`4` render modu. Fare ile sürükle = yörünge, tekerlek = zoom.
+Kısayollar: `W` wireframe, `S` gölge, `Space` duraklat, `1`–`4` render modu.
+Fare ile sürükle = yörünge, tekerlek = zoom. HUD canlı olarak fps, kare süresi,
+çözünürlük, rasterize edilen üçgen, shade edilen fragment, clip edilen üçgen ve
+pass başına milisaniye gösterir.
 
-HUD canlı olarak fps, kare süresi, çözünürlük, rasterize edilen üçgen sayısı, shade edilen fragment sayısı, clip edilen üçgen sayısı ve pass başına milisaniye gösterir.
+## Ölçülen referans değerler
 
-## Pipeline
+Node 24, tek çekirdek, 960×600, **20.485 üçgen**, **527.240 fragment**, 2 üçgen
+near-plane'de kırpıldı:
 
-Gerçek bir GPU'nun yaptığı işin elle yazılmış hali (`src/raster.js`):
+| Pass | Süre |
+| --- | --- |
+| Shadow pass | 43.63 ms |
+| Geometry + shading | 178.76 ms |
+| Resolve | 53.52 ms |
+| **Toplam** | **275.91 ms** |
+
+Aynı koşuda konu kapsama oranı **%66.0**, ortalama parlaklık **81.99/255**. Bundle
+doğrulaması 675×420'de **%65.1** kapsama ve **223.67** maksimum luma ile geçti.
+
+## Doğrulama
+
+CI (`.github/workflows/ci.yml`) her push'ta beş adım çalıştırır ve hiçbiri
+"derlendi, demek ki çalışıyor" varsayımına dayanmaz:
+
+| Adım | Ne kanıtlıyor |
+| --- | --- |
+| `test` | 18 matematik assertion'ı: `lookAt` kamerayı origin'e taşıyor mu, `perspective` near/far düzlemlerini tam olarak −1/+1'e eşliyor mu, `normalMatrix` non-uniform scale altında dikliği koruyor mu, tekil matriste identity'ye düşüyor mu |
+| `still` | Headless kare render eder, piksel istatistiklerini denetler. **Siyah veya düz bir kare CI'ı düşürür** |
+| `modes` | Dört render modunu ayrı ayrı render edip hash'lerinin farklı olduğunu doğrular (bozuk mod switch'i dört aynı kare üretirdi) |
+| `build` | Altı ES modülünü tek HTML'e gömer; artıkta `import`/`export` kalırsa hata verir |
+| `verify` | Üretilen tek dosyayı Node'un `vm`'inde minimal DOM stub'ıyla **çalıştırır**, `putImageData`'ya giden gerçek pikselleri yakalar, kapsama/parlaklık eşiklerini kontrol eder |
+
+Yani test edilen "bundle parse oluyor" değil, **"bundle görüntü çiziyor"**.
+
+<details>
+<summary><b>Pipeline — bir GPU'nun sessizce yaptığı işin elle yazılmış hali</b></summary>
+
+`src/raster.js` içinde:
 
 1. **Vertex transform** — model → world → clip space; normaller inverse-transpose matrisle taşınır (non-uniform scale altında dik kalsınlar diye).
 2. **Near-plane clipping** — homojen uzayda Sutherland–Hodgman; kameranın arkasına taşan üçgenler kırpılır, sonuç fan-triangulate edilir.
@@ -41,9 +96,13 @@ Gerçek bir GPU'nun yaptığı işin elle yazılmış hali (`src/raster.js`):
 9. **Shading** — hemisphere ambient + Lambert diffuse + Blinn-Phong specular + Fresnel rim; prosedürel checker/stripe albedo.
 10. **Resolve** — ACES filmic tonemap, vignette, gamma 2.2.
 
-Sıcak döngüde hiç allocation yok: vertex, clip ve fragment yapıları modül seviyesinde bir kez ayrılıp yeniden kullanılıyor.
+Sıcak döngüde hiç allocation yok: vertex, clip ve fragment yapıları modül
+seviyesinde bir kez ayrılıp yeniden kullanılıyor.
 
-## Dosya yapısı
+</details>
+
+<details>
+<summary><b>Dosya yapısı ve diğer komutlar</b></summary>
 
 ```
 src/math.js         4x4 matris/vektör katmanı (lookAt, perspective, ortho, normalMatrix)
@@ -57,43 +116,30 @@ tools/              headless render, PNG encoder, testler, tek-dosya build
 
 Renderer'ın DOM'dan haberi yok — bu yüzden aynı kod Node'da da çalışıp PNG üretebiliyor.
 
-## Çalıştırma
-
 ```bash
-# tarayıcıda (ES modülleri için basit bir sunucu yeterli)
-python3 -m http.server 8000   # sonra http://localhost:8000
-
-# headless still render + smoke test
-npm run still
-
-# tüm debug modlarını tek bir contact sheet olarak üret
-npm run modes
-
-# tek dosyalık dağıtım üret ve gerçekten piksel çizdiğini doğrula
-npm run build && npm run verify
-
-# matematik katmanının birim testleri (18 assertion)
-npm test
+npm run still     # headless still render + smoke test
+npm run modes     # tüm debug modlarını tek contact sheet olarak üret
+npm test          # matematik katmanının birim testleri (18 assertion)
 ```
 
-Bağımlılık yok — sadece Node 18+.
-
-## Doğrulama
-
-CI (`.github/workflows/ci.yml`) her push'ta beş adım çalıştırır ve hiçbiri "derlendi, demek ki çalışıyor" varsayımına dayanmaz:
-
-- **`test`** — 18 matematik assertion'ı: `lookAt` kamerayı origin'e taşıyor mu, `perspective` near/far düzlemlerini tam olarak -1/+1'e mi eşliyor, `normalMatrix` non-uniform scale altında dikliği koruyor mu, tekil matriste identity'ye düşüyor mu.
-- **`still`** — headless kare render eder ve piksel istatistiklerini denetler: rasterize edilen üçgen sayısı, shade edilen fragment sayısı, maksimum parlaklık ve konu kapsama oranı. Siyah veya düz bir kare CI'ı düşürür.
-- **`modes`** — dört render modunu ayrı ayrı render edip hash'lerinin farklı olduğunu doğrular (bozuk bir mod switch'i dört aynı kare üretirdi).
-- **`build`** — altı ES modülünü tek bir HTML'e gömer; artıkta kalan `import`/`export` varsa hata verir.
-- **`verify`** — üretilen tek dosyayı Node'un `vm`'inde minimal bir DOM stub'ıyla **çalıştırır**, `putImageData`'ya giden gerçek pikselleri yakalar ve kapsama/parlaklık eşiklerini kontrol eder. Yani "bundle parse oluyor" değil, "bundle görüntü çiziyor" test ediliyor.
-
-Ölçülen referans değerler (Node 24, tek çekirdek, 960×600, 20.485 üçgen, 527.240 fragment, 2 üçgen near-plane'de kırpıldı): shadow pass 43.63 ms, geometry+shading 178.76 ms, resolve 53.52 ms, toplam 275.91 ms. Aynı koşuda konu kapsama oranı %66.0, ortalama parlaklık 81.99/255. Bundle doğrulaması 675×420'de %65.1 kapsama ve 223.67 maksimum luma ile geçti.
+</details>
 
 ## Neden ilginç?
 
-Bir GPU'nun sizin için sessizce yaptığı her şey burada görünür durumda: perspective-correct interpolation'ı çıkarırsanız dokular kayar, depth bias'ı sıfırlarsanız shadow acne çıkar, near-plane clipping'i atlarsanız kameranın arkasındaki üçgenler ekranı yırtar. Kod bu yüzden "kısa" değil, **okunabilir** olacak şekilde yazıldı.
+Bir GPU'nun sizin için sessizce yaptığı her şey burada görünür durumda:
+perspective-correct interpolation'ı çıkarırsanız dokular kayar, depth bias'ı
+sıfırlarsanız shadow acne çıkar, near-plane clipping'i atlarsanız kameranın
+arkasındaki üçgenler ekranı yırtar. Kod bu yüzden "kısa" değil, **okunabilir**
+olacak şekilde yazıldı.
 
-## Lisans
+## Sınırlar
+
+- **Gerçek zamanlı değil, gerçekçi zamanlı.** Yukarıdaki 275.91 ms tek çekirdekli bir CPU ölçümüdür; bir GPU aynı kareyi mikrosaniyelerle çizer. Bu proje hız için değil, görünürlük için yazıldı.
+- Yalnızca Node 18+ ile çalışır; bağımlılık yok ama platform gereksinimi var.
+- GitHub Pages workflow'u (`.github/workflows/pages.yml`) hazır ve her push'ta çalışıyor; yayının açılması için **Settings → Pages → Source: GitHub Actions** bir kez seçilmeli. Seçildikten sonra adres https://umutseve4.github.io/scanline/ olur.
+- Doku dosyası, malzeme sistemi, animasyon içe aktarma ve saydamlık sıralaması yok; albedo prosedürel.
+- CI piksel çizildiğini kanıtlar; tarayıcıdaki görsel doğruluk, erişilebilirlik ve kare hızı davranışı ayrı bir kabul turu ister.
+
+---
 
 MIT
