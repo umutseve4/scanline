@@ -136,7 +136,7 @@ olacak şekilde yazıldı.
 
 - **Gerçek zamanlı değil, gerçekçi zamanlı.** Yukarıdaki 275.91 ms tek çekirdekli bir CPU ölçümüdür; bir GPU aynı kareyi mikrosaniyelerle çizer. Bu proje hız için değil, görünürlük için yazıldı.
 - Yalnızca Node 18+ ile çalışır; bağımlılık yok ama platform gereksinimi var.
-- GitHub Pages workflow'u (`.github/workflows/pages.yml`) hazır ve her push'ta çalışıyor; yayının açılması için **Settings → Pages → Source: GitHub Actions** bir kez seçilmeli. Seçildikten sonra adres https://umutseve4.github.io/scanline/ olur.
+- **Canlı bir demo adresi yok.** GitHub Pages workflow'u (`.github/workflows/pages.yml`) hazır ve her push'ta çalışıyor, ancak yayın açılmadı: **Settings → Pages → Source: GitHub Actions** bir kez seçilmeli. Seçilene kadar `https://umutseve4.github.io/scanline/` adresi 404 döner, bu yüzden burada bilinçli olarak bağlantı verilmiyor.
 - Doku dosyası, malzeme sistemi, animasyon içe aktarma ve saydamlık sıralaması yok; albedo prosedürel.
 - CI piksel çizildiğini kanıtlar; tarayıcıdaki görsel doğruluk, erişilebilirlik ve kare hızı davranışı ayrı bir kabul turu ister.
 
