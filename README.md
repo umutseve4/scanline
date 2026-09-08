@@ -2,8 +2,12 @@
 
 <p align="center">
   GPU kullanmadan, her pikseli JavaScript'te tek tek hesaplayan bir 3D renderer.<br>
-  Üçgen taraması, z-buffer, gölge haritası, aydınlatma, tonemapping — hepsi elle yazıldı.<br>
+  Üçgen taraması, z-buffer, gölge haritası, aydınlatma, tonemapping. Hepsi elle yazıldı.<br>
   <code>canvas</code> yalnızca hazır piksel dizisini ekrana basmak için var.
+</p>
+
+<p align="center">
+  <a href="https://umutseve4.github.io/scanline/"><b>Canlı demo</b></a>
 </p>
 
 <p align="center">
@@ -41,11 +45,11 @@ tonemap ile gerçek zamanlı çiziliyor.
 | Mod | `shaded`, `normals`, `depth` (linearize edilmiş), `uv` |
 | Gölge haritası | 768×768 shadow map + PCF açık/kapalı |
 | Wireframe | Bresenham çizgilerle tel kafes overlay |
-| Çözünürlük | 0.25x – 1.0x iç render ölçeği |
-| Pozlama | ACES öncesi exposure 0.30 – 2.50 |
+| Çözünürlük | 0.25x ile 1.0x iç render ölçeği |
+| Pozlama | ACES öncesi exposure 0.30 ile 2.50 |
 | PNG kaydet | O anki kareyi indirir |
 
-Kısayollar: `W` wireframe, `S` gölge, `Space` duraklat, `1`–`4` render modu.
+Kısayollar: `W` wireframe, `S` gölge, `Space` duraklat, `1` ile `4` render modu.
 Fare ile sürükle = yörünge, tekerlek = zoom. HUD canlı olarak fps, kare süresi,
 çözünürlük, rasterize edilen üçgen, shade edilen fragment, clip edilen üçgen ve
 pass başına milisaniye gösterir.
@@ -81,20 +85,20 @@ CI (`.github/workflows/ci.yml`) her push'ta beş adım çalıştırır ve hiçbi
 Yani test edilen "bundle parse oluyor" değil, **"bundle görüntü çiziyor"**.
 
 <details>
-<summary><b>Pipeline — bir GPU'nun sessizce yaptığı işin elle yazılmış hali</b></summary>
+<summary><b>Pipeline: bir GPU'nun sessizce yaptığı işin elle yazılmış hali</b></summary>
 
 `src/raster.js` içinde:
 
-1. **Vertex transform** — model → world → clip space; normaller inverse-transpose matrisle taşınır (non-uniform scale altında dik kalsınlar diye).
-2. **Near-plane clipping** — homojen uzayda Sutherland–Hodgman; kameranın arkasına taşan üçgenler kırpılır, sonuç fan-triangulate edilir.
-3. **Perspective divide + viewport map** — NDC → piksel koordinatları.
-4. **Backface culling** — işaretli ekran alanı ile.
-5. **Edge-function scan** — bounding box üzerinde artımsal kenar fonksiyonları; kapsama testi 3 karşılaştırma.
-6. **Perspective-correct interpolation** — attribute/w interpolasyonu, sonra 1/w'ye bölme. (Affine interpolasyon zeminde belirgin şekilde eğrilirdi.)
-7. **Z-buffer** — Float32Array derinlik tamponu.
-8. **Shadow pass** — ışık için ortografik derinlik render'ı, ardından 3×3 PCF ve eğime bağlı depth bias (`0.0016 + 0.006 * (1 - N·L)`) ile shadow acne engelleniyor.
-9. **Shading** — hemisphere ambient + Lambert diffuse + Blinn-Phong specular + Fresnel rim; prosedürel checker/stripe albedo.
-10. **Resolve** — ACES filmic tonemap, vignette, gamma 2.2.
+1. **Vertex transform.** Model → world → clip space; normaller inverse-transpose matrisle taşınır (non-uniform scale altında dik kalsınlar diye).
+2. **Near-plane clipping.** Homojen uzayda Sutherland-Hodgman; kameranın arkasına taşan üçgenler kırpılır, sonuç fan-triangulate edilir.
+3. **Perspective divide + viewport map.** NDC → piksel koordinatları.
+4. **Backface culling.** İşaretli ekran alanı ile.
+5. **Edge-function scan.** Bounding box üzerinde artımsal kenar fonksiyonları; kapsama testi 3 karşılaştırma.
+6. **Perspective-correct interpolation.** Attribute/w interpolasyonu, sonra 1/w'ye bölme. (Affine interpolasyon zeminde belirgin şekilde eğrilirdi.)
+7. **Z-buffer.** Float32Array derinlik tamponu.
+8. **Shadow pass.** Işık için ortografik derinlik render'ı, ardından 3×3 PCF ve eğime bağlı depth bias (`0.0016 + 0.006 * (1 - N·L)`) ile shadow acne engelleniyor.
+9. **Shading.** Hemisphere ambient + Lambert diffuse + Blinn-Phong specular + Fresnel rim; prosedürel checker/stripe albedo.
+10. **Resolve.** ACES filmic tonemap, vignette, gamma 2.2.
 
 Sıcak döngüde hiç allocation yok: vertex, clip ve fragment yapıları modül
 seviyesinde bir kez ayrılıp yeniden kullanılıyor.
@@ -114,7 +118,7 @@ src/main.js         tarayıcı katmanı: canvas blit, orbit kontrol, HUD, UI
 tools/              headless render, PNG encoder, testler, tek-dosya build
 ```
 
-Renderer'ın DOM'dan haberi yok — bu yüzden aynı kod Node'da da çalışıp PNG üretebiliyor.
+Renderer'ın DOM'dan haberi yok, bu yüzden aynı kod Node'da da çalışıp PNG üretebiliyor.
 
 ```bash
 npm run still     # headless still render + smoke test
@@ -136,7 +140,7 @@ olacak şekilde yazıldı.
 
 - **Gerçek zamanlı değil, gerçekçi zamanlı.** Yukarıdaki 275.91 ms tek çekirdekli bir CPU ölçümüdür; bir GPU aynı kareyi mikrosaniyelerle çizer. Bu proje hız için değil, görünürlük için yazıldı.
 - Yalnızca Node 18+ ile çalışır; bağımlılık yok ama platform gereksinimi var.
-- **Canlı bir demo adresi yok.** GitHub Pages workflow'u (`.github/workflows/pages.yml`) hazır ve her push'ta çalışıyor, ancak yayın açılmadı: **Settings → Pages → Source: GitHub Actions** bir kez seçilmeli. Seçilene kadar `https://umutseve4.github.io/scanline/` adresi 404 döner, bu yüzden burada bilinçli olarak bağlantı verilmiyor.
+- Canlı demo tarayıcıda çalışır, ancak yayınlanan dosya `npm run build` çıktısının aynısıdır; tarayıcıdaki kare hızı ölçülmedi ve hiçbir yerde fps iddiası yayınlanmıyor.
 - Doku dosyası, malzeme sistemi, animasyon içe aktarma ve saydamlık sıralaması yok; albedo prosedürel.
 - CI piksel çizildiğini kanıtlar; tarayıcıdaki görsel doğruluk, erişilebilirlik ve kare hızı davranışı ayrı bir kabul turu ister.
 
