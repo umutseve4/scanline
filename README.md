@@ -1,148 +1,135 @@
 <h1 align="center">scanline</h1>
 
 <p align="center">
-  GPU kullanmadan, her pikseli JavaScript'te tek tek hesaplayan bir 3D renderer.<br>
-  Üçgen taraması, z-buffer, gölge haritası, aydınlatma, tonemapping. Hepsi elle yazıldı.<br>
-  <code>canvas</code> yalnızca hazır piksel dizisini ekrana basmak için var.
+  A 3D renderer that uses no GPU and computes every pixel one by one in JavaScript.<br>
+  Triangle scan, z-buffer, shadow map, lighting, tonemapping. All of it written by hand.<br>
+  <code>canvas</code> exists only to blit the finished pixel array to the screen.
 </p>
 
 <p align="center">
-  <a href="https://umutseve4.github.io/scanline/"><b>Canlı demo</b></a>
+  <a href="https://umutseve4.github.io/scanline/"><b>Live demo</b></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/umutseve4/scanline/actions"><img src="https://github.com/umutseve4/scanline/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/CI%20ad%C4%B1m%C4%B1-5-FF4D4F?style=flat-square" alt="5 CI adımı">
-  <img src="https://img.shields.io/badge/ba%C4%9F%C4%B1ml%C4%B1l%C4%B1k-0-FF4D4F?style=flat-square" alt="0 bağımlılık">
-  <img src="https://img.shields.io/badge/pipeline%20a%C5%9Famas%C4%B1-10-FF4D4F?style=flat-square" alt="10 aşama">
+  <img src="https://img.shields.io/badge/CI%20steps-5-FF4D4F?style=flat-square" alt="5 CI steps">
+  <img src="https://img.shields.io/badge/dependencies-0-FF4D4F?style=flat-square" alt="0 dependencies">
+  <img src="https://img.shields.io/badge/pipeline%20stages-10-FF4D4F?style=flat-square" alt="10 stages">
 </p>
 
 ---
 
-## 30 saniyede ne oluyor?
+## What happens in the first 30 seconds
 
 ```bash
 git clone https://github.com/umutseve4/scanline && cd scanline
-npm run build      # → dist/scanline.html
+npm run build      # -> dist/scanline.html
 ```
 
-Çıkan tek dosyayı çift tıkla. Sunucu, kurulum, internet gerekmez.
+Double click the single file that comes out. No server, no install, no internet needed.
 
-Kaynaktan çalıştırmak istersen (ES modülleri için basit bir sunucu yeterli):
+If you would rather run it from source, any simple server will do for ES modules:
 
 ```bash
-python3 -m http.server 8000   # sonra http://localhost:8000
+python3 -m http.server 8000   # then http://localhost:8000
 ```
 
-Ekranda: dönen bir (2,3) torus knot, zıplayan bir küre, dönen bir küp ve satranç
-tahtası zemin; yönlü ışık, 3×3 PCF yumuşak gölge, Blinn-Phong specular ve ACES
-tonemap ile gerçek zamanlı çiziliyor.
+On screen: a rotating (2,3) torus knot, a bouncing sphere, a spinning cube and a checkerboard floor, drawn in real time with a directional light, a 3x3 PCF soft shadow, a Blinn-Phong specular and an ACES tonemap.
 
-## Kontroller
+## Controls
 
-| Kontrol | Açıklama |
+| Control | What it does |
 | --- | --- |
-| Mod | `shaded`, `normals`, `depth` (linearize edilmiş), `uv` |
-| Gölge haritası | 768×768 shadow map + PCF açık/kapalı |
-| Wireframe | Bresenham çizgilerle tel kafes overlay |
-| Çözünürlük | 0.25x ile 1.0x iç render ölçeği |
-| Pozlama | ACES öncesi exposure 0.30 ile 2.50 |
-| PNG kaydet | O anki kareyi indirir |
+| Mode | `shaded`, `normals`, `depth` (linearised), `uv` |
+| Shadow map | 768x768 shadow map plus PCF, on or off |
+| Wireframe | Wireframe overlay drawn with Bresenham lines |
+| Resolution | Internal render scale from 0.25x to 1.0x |
+| Exposure | Pre ACES exposure from 0.30 to 2.50 |
+| Save PNG | Downloads the current frame |
 
-Kısayollar: `W` wireframe, `S` gölge, `Space` duraklat, `1` ile `4` render modu.
-Fare ile sürükle = yörünge, tekerlek = zoom. HUD canlı olarak fps, kare süresi,
-çözünürlük, rasterize edilen üçgen, shade edilen fragment, clip edilen üçgen ve
-pass başına milisaniye gösterir.
+Shortcuts: `W` wireframe, `S` shadow, `Space` pause, `1` to `4` render mode. Drag with the mouse to orbit, wheel to zoom. The HUD shows fps, frame time, resolution, rasterised triangles, shaded fragments, clipped triangles and milliseconds per pass, live.
 
-## Ölçülen referans değerler
+## Measured reference numbers
 
-Node 24, tek çekirdek, 960×600, **20.485 üçgen**, **527.240 fragment**, 2 üçgen
-near-plane'de kırpıldı:
+Node 24, single core, 960x600, **20,485 triangles**, **527,240 fragments**, 2 triangles clipped at the near plane:
 
-| Pass | Süre |
+| Pass | Time |
 | --- | --- |
 | Shadow pass | 43.63 ms |
-| Geometry + shading | 178.76 ms |
+| Geometry and shading | 178.76 ms |
 | Resolve | 53.52 ms |
-| **Toplam** | **275.91 ms** |
+| **Total** | **275.91 ms** |
 
-Aynı koşuda konu kapsama oranı **%66.0**, ortalama parlaklık **81.99/255**. Bundle
-doğrulaması 675×420'de **%65.1** kapsama ve **223.67** maksimum luma ile geçti.
+In the same run, subject coverage was **66.0%** and mean brightness **81.99/255**. Bundle verification passed at 675x420 with **65.1%** coverage and a maximum luma of **223.67**.
 
-## Doğrulama
+## Verification
 
-CI (`.github/workflows/ci.yml`) her push'ta beş adım çalıştırır ve hiçbiri
-"derlendi, demek ki çalışıyor" varsayımına dayanmaz:
+CI (`.github/workflows/ci.yml`) runs five steps on every push, and none of them rests on the assumption that "it built, so it works":
 
-| Adım | Ne kanıtlıyor |
+| Step | What it proves |
 | --- | --- |
-| `test` | 18 matematik assertion'ı: `lookAt` kamerayı origin'e taşıyor mu, `perspective` near/far düzlemlerini tam olarak −1/+1'e eşliyor mu, `normalMatrix` non-uniform scale altında dikliği koruyor mu, tekil matriste identity'ye düşüyor mu |
-| `still` | Headless kare render eder, piksel istatistiklerini denetler. **Siyah veya düz bir kare CI'ı düşürür** |
-| `modes` | Dört render modunu ayrı ayrı render edip hash'lerinin farklı olduğunu doğrular (bozuk mod switch'i dört aynı kare üretirdi) |
-| `build` | Altı ES modülünü tek HTML'e gömer; artıkta `import`/`export` kalırsa hata verir |
-| `verify` | Üretilen tek dosyayı Node'un `vm`'inde minimal DOM stub'ıyla **çalıştırır**, `putImageData`'ya giden gerçek pikselleri yakalar, kapsama/parlaklık eşiklerini kontrol eder |
+| `test` | 18 maths assertions: does `lookAt` move the camera to the origin, does `perspective` map the near and far planes exactly to -1 and +1, does `normalMatrix` keep perpendicularity under non uniform scale, does it fall back to identity on a singular matrix |
+| `still` | Renders a headless frame and inspects the pixel statistics. **A black or flat frame fails CI** |
+| `modes` | Renders the four render modes separately and verifies their hashes differ (a broken mode switch would produce four identical frames) |
+| `build` | Inlines six ES modules into one HTML file, and errors out if any `import` or `export` is left in the output |
+| `verify` | **Runs** the produced single file inside Node's `vm` with a minimal DOM stub, captures the real pixels heading for `putImageData`, and checks the coverage and brightness thresholds |
 
-Yani test edilen "bundle parse oluyor" değil, **"bundle görüntü çiziyor"**.
+So what is tested is not "the bundle parses", it is **"the bundle draws an image"**.
 
 <details>
-<summary><b>Pipeline: bir GPU'nun sessizce yaptığı işin elle yazılmış hali</b></summary>
+<summary><b>Pipeline: the hand written version of what a GPU does silently</b></summary>
 
-`src/raster.js` içinde:
+Inside `src/raster.js`:
 
-1. **Vertex transform.** Model → world → clip space; normaller inverse-transpose matrisle taşınır (non-uniform scale altında dik kalsınlar diye).
-2. **Near-plane clipping.** Homojen uzayda Sutherland-Hodgman; kameranın arkasına taşan üçgenler kırpılır, sonuç fan-triangulate edilir.
-3. **Perspective divide + viewport map.** NDC → piksel koordinatları.
-4. **Backface culling.** İşaretli ekran alanı ile.
-5. **Edge-function scan.** Bounding box üzerinde artımsal kenar fonksiyonları; kapsama testi 3 karşılaştırma.
-6. **Perspective-correct interpolation.** Attribute/w interpolasyonu, sonra 1/w'ye bölme. (Affine interpolasyon zeminde belirgin şekilde eğrilirdi.)
-7. **Z-buffer.** Float32Array derinlik tamponu.
-8. **Shadow pass.** Işık için ortografik derinlik render'ı, ardından 3×3 PCF ve eğime bağlı depth bias (`0.0016 + 0.006 * (1 - N·L)`) ile shadow acne engelleniyor.
-9. **Shading.** Hemisphere ambient + Lambert diffuse + Blinn-Phong specular + Fresnel rim; prosedürel checker/stripe albedo.
+1. **Vertex transform.** Model to world to clip space; normals are carried by the inverse transpose matrix so they stay perpendicular under non uniform scale.
+2. **Near plane clipping.** Sutherland-Hodgman in homogeneous space; triangles crossing behind the camera are clipped and the result is fan triangulated.
+3. **Perspective divide and viewport map.** NDC to pixel coordinates.
+4. **Backface culling.** Using the signed screen area.
+5. **Edge function scan.** Incremental edge functions over the bounding box; the coverage test is 3 comparisons.
+6. **Perspective correct interpolation.** Attribute over w interpolation, then division by 1/w. (Affine interpolation visibly warped the floor.)
+7. **Z-buffer.** A Float32Array depth buffer.
+8. **Shadow pass.** An orthographic depth render for the light, then 3x3 PCF and a slope dependent depth bias (`0.0016 + 0.006 * (1 - N·L)`) to keep shadow acne away.
+9. **Shading.** Hemisphere ambient plus Lambert diffuse plus Blinn-Phong specular plus a Fresnel rim; procedural checker and stripe albedo.
 10. **Resolve.** ACES filmic tonemap, vignette, gamma 2.2.
 
-Sıcak döngüde hiç allocation yok: vertex, clip ve fragment yapıları modül
-seviyesinde bir kez ayrılıp yeniden kullanılıyor.
+There is no allocation in the hot loop: the vertex, clip and fragment structures are allocated once at module level and reused.
 
 </details>
 
 <details>
-<summary><b>Dosya yapısı ve diğer komutlar</b></summary>
+<summary><b>File layout and the other commands</b></summary>
 
 ```
-src/math.js         4x4 matris/vektör katmanı (lookAt, perspective, ortho, normalMatrix)
-src/framebuffer.js  linear renk + derinlik hedefleri, ACES resolve
-src/geometry.js     prosedürel plane / box / sphere / torus knot
-src/raster.js       rasterizer: clipping, culling, edge scan, z-test, çizgi çizimi
-src/scene.js        sahne grafiği, ışık, gölge pass'i, shading modeli, kare döngüsü
-src/main.js         tarayıcı katmanı: canvas blit, orbit kontrol, HUD, UI
-tools/              headless render, PNG encoder, testler, tek-dosya build
+src/math.js         4x4 matrix and vector layer (lookAt, perspective, ortho, normalMatrix)
+src/framebuffer.js  linear colour and depth targets, ACES resolve
+src/geometry.js     procedural plane / box / sphere / torus knot
+src/raster.js       rasteriser: clipping, culling, edge scan, z-test, line drawing
+src/scene.js        scene graph, light, shadow pass, shading model, frame loop
+src/main.js         browser layer: canvas blit, orbit control, HUD, UI
+tools/              headless render, PNG encoder, tests, single file build
 ```
 
-Renderer'ın DOM'dan haberi yok, bu yüzden aynı kod Node'da da çalışıp PNG üretebiliyor.
+The renderer knows nothing about the DOM, which is why the same code also runs under Node and produces a PNG.
 
 ```bash
-npm run still     # headless still render + smoke test
-npm run modes     # tüm debug modlarını tek contact sheet olarak üret
-npm test          # matematik katmanının birim testleri (18 assertion)
+npm run still     # headless still render plus smoke test
+npm run modes     # render every debug mode into one contact sheet
+npm test          # unit tests for the maths layer (18 assertions)
 ```
 
 </details>
 
-## Neden ilginç?
+## Why it is interesting
 
-Bir GPU'nun sizin için sessizce yaptığı her şey burada görünür durumda:
-perspective-correct interpolation'ı çıkarırsanız dokular kayar, depth bias'ı
-sıfırlarsanız shadow acne çıkar, near-plane clipping'i atlarsanız kameranın
-arkasındaki üçgenler ekranı yırtar. Kod bu yüzden "kısa" değil, **okunabilir**
-olacak şekilde yazıldı.
+Everything a GPU does silently for you is visible here: remove the perspective correct interpolation and textures slide, zero the depth bias and shadow acne appears, skip the near plane clipping and triangles behind the camera tear across the screen. That is why the code was written to be **readable** rather than short.
 
-## Sınırlar
+## Limits
 
-- **Gerçek zamanlı değil, gerçekçi zamanlı.** Yukarıdaki 275.91 ms tek çekirdekli bir CPU ölçümüdür; bir GPU aynı kareyi mikrosaniyelerle çizer. Bu proje hız için değil, görünürlük için yazıldı.
-- Yalnızca Node 18+ ile çalışır; bağımlılık yok ama platform gereksinimi var.
-- Canlı demo tarayıcıda çalışır, ancak yayınlanan dosya `npm run build` çıktısının aynısıdır; tarayıcıdaki kare hızı ölçülmedi ve hiçbir yerde fps iddiası yayınlanmıyor.
-- Doku dosyası, malzeme sistemi, animasyon içe aktarma ve saydamlık sıralaması yok; albedo prosedürel.
-- CI piksel çizildiğini kanıtlar; tarayıcıdaki görsel doğruluk, erişilebilirlik ve kare hızı davranışı ayrı bir kabul turu ister.
+- **Not real time, honestly timed.** The 275.91 ms above is a single core CPU measurement; a GPU draws the same frame in microseconds. This project was written for visibility, not for speed.
+- It runs only on Node 18 or newer. No dependencies, but there is a platform requirement.
+- The live demo runs in the browser, and the published file is identical to the `npm run build` output. The browser frame rate was not measured and no fps claim is published anywhere.
+- There are no texture files, no material system, no animation import and no transparency sorting; albedo is procedural.
+- CI proves pixels are drawn. Visual correctness in a browser, accessibility and frame rate behaviour need a separate acceptance pass.
 
 ---
 
